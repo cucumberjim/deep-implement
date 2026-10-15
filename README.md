@@ -2,7 +2,7 @@
 
 # /deep-implement, a Claude Code plugin
 
-![Version](https://img.shields.io/badge/version-0.2.1-blue)
+![Version](https://img.shields.io/badge/version-0.3.0-blue)
 ![Status](https://img.shields.io/badge/status-beta-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Claude Code](https://img.shields.io/badge/Claude%20Code-Plugin-purple)
@@ -42,6 +42,7 @@ I built `/deep-implement` because after I'd automated my planning workflow throu
 - [Usage](#usage)
 - [Workflow Steps](#workflow-steps)
 - [Output Files](#output-files)
+- [Ollama Code Reviewers (optional)](#ollama-code-reviewers-optional)
 - [Requirements](#requirements)
 - [Best Practices](#best-practices)
 - [Troubleshooting](#troubleshooting)
@@ -353,6 +354,8 @@ planning/
     └── code_review/
         ├── section-01-diff.md      # Staged diff
         ├── section-01-review.md    # Code review findings
+        ├── section-01-review-ollama-<slug>.md  # Ollama reviews (optional)
+        ├── section-01-ollama-summary.json      # Ollama run summary
         ├── section-01-interview.md # Your decisions
         └── ...
 ```
@@ -369,6 +372,34 @@ Each `section-NN-*.md` file gets a "What Was Built" addendum after implementatio
 
 This means anyone—human or AI agent—can quickly understand what was built without introspecting code. The section files become point-in-time documentation that stays accurate because they're updated at commit time.
 
+## Ollama Code Reviewers (optional)
+
+Any model served by [Ollama](https://ollama.com), locally, on another machine, or through Ollama cloud, can review each section's diff **in addition to** the Claude code reviewer. They read the same diff and section plan, each writes `section-NN-review-ollama-<slug>.md`, and Step 7 triage merges, de-duplicates and verifies the findings from every reviewer.
+
+| Var | Required | Meaning |
+|-----|----------|---------|
+| `OLLAMA_HOST` | Yes | Server address (`host:port` or `http(s)://host[:port][/path]`). |
+| `OLLAMA_MODELS` | No* | Comma-separated model list. Overrides `ollama.models` in `config.json`. |
+| `OLLAMA_API_KEY` | No | Bearer token for a reverse proxy. Defaults to the placeholder `"ollama"`. |
+
+*Ollama review is on **only when `OLLAMA_HOST` is set and the model list is non-empty**. The default list is empty, because `OLLAMA_HOST` is also the Ollama server's own variable. These are the same variables [deep-plan](https://github.com/piercelamb/deep-plan) uses, so one shell setup turns on both plugins.
+
+```bash
+export OLLAMA_HOST=http://localhost:11434
+export OLLAMA_MODELS=qwen3-coder-next:latest
+```
+
+**Prerequisite: the server needs `OLLAMA_CONTEXT_LENGTH=65536` (or more).** The context window can't be set through Ollama's OpenAI-compatible API, and the server default depends on VRAM: 4k tokens with under 24 GiB, 32k with 24–48 GiB, 256k with 48 GiB or more. Overflow is silent: Ollama keeps the first few tokens and the tail, drops the middle (the instructions and plan go first), and still returns success. **With the 4k default, every real diff fails until you raise it.**
+
+deep-implement detects truncation when the server reports fewer than 0.7 × the estimated prompt tokens (chars/4). That fails the review for that model instead of keeping a review of a mangled prompt. The check catches overflow from about 1.4× the context window upward. A smaller overflow can still slip through, and an unusually prose-heavy prompt could fail it falsely.
+
+Notes:
+- **Runtime:** models run one at a time, up to `ollama.timeout_seconds` (default 1800 s) each, **per section**, and triage waits for them. For example, 3 models means up to 90 minutes per section. The script runs in the background, so no Bash timeout applies, but it stops if the session exits or you `/clear`; on resume it is re-run.
+- **Failures never block:** a failed or slow model is noted in the interview transcript's Reviewers line. The Claude review and the commit carry on.
+- **Temperature:** `ollama.temperature` in `config.json` defaults to `null`, which sends nothing, so Ollama's `/v1` uses 1.0 and overrides the Modelfile. Set a number (e.g. `0.2`) to override. The right value depends on the model: Qwen3-Coder-Next recommends 1.0, and reasoning models loop at low temperature.
+- **Remote hosts:** use https for anything that isn't localhost. `OLLAMA_API_KEY` is sent as `Authorization: Bearer`. A reverse proxy's read timeout must be longer than the model timeout (nginx defaults to 60 s).
+- **Plugin updates** overwrite edits to the plugin's `config.json`. `OLLAMA_MODELS` is the durable way to choose models.
+
 ## Requirements
 
 - Claude Code
@@ -376,6 +407,7 @@ This means anyone—human or AI agent—can quickly understand what was built wi
 - uv package manager
 - Git repository (recommended)
 - Section files from `/deep-plan`
+- (Optional) An Ollama server for extra code reviewers
 
 ## Best Practices
 
@@ -489,4 +521,4 @@ Pierce Lamb
 
 ## Version
 
-0.2.1
+0.3.0

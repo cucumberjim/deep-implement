@@ -11,6 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Marketplace now lists `lodestone` (sibling MCP research-corpus plugin).
 - Marketplace now lists `deep-sota` (sibling research-skill plugin that drives lodestone).
 
+## [0.3.0] - 2026-10-15
+
+### Added
+- **Ollama code reviewers** (optional). Any Ollama-hosted model reviews each section's diff alongside the Claude code-reviewer. Opt in with `OLLAMA_HOST` plus `OLLAMA_MODELS` (or `ollama.models` in the new plugin-root `config.json`). An optional `OLLAMA_API_KEY` is sent as a Bearer token for proxies. Models run one at a time in the background; failures never block the section.
+- `scripts/tools/ollama_code_review.py` and `prompts/ollama_code_reviewer/`. Each model writes `section-NN-review-ollama-<slug>.md`, and a `section-NN-ollama-summary.json` is always written.
+- `scripts/lib/ollama_client.py`, byte-identical with deep-plan's copy (sha256 pin test). It adds an optional `ollama.temperature` and a context-truncation guard (fails the review when the server reports under 0.7 × the estimated prompt tokens).
+- Step 7 triage across several reviews: duplicate findings merged with attribution, findings outside the diff dropped, every finding verified, no unverified auto-fix for Ollama-only findings, and a Reviewers status line in the interview transcript.
+- `openai` runtime dependency (run the script via `uv run --project {plugin_root}`).
+
 ## [0.2.1] - 2026-02-28
 
 ### Fixed

@@ -215,7 +215,7 @@ For each incomplete section (in manifest order):
 | Task Subject | Workflow Steps |
 |-----------|----------------|
 | Implement section-NN | Steps 1-5 (read, TDD, stage) |
-| Run code review subagent | Step 6 (launch subagent, write review) |
+| Run code review subagent | Step 6 (Ollama reviewers in background + Claude subagent, write reviews) |
 | Perform code review interview | Steps 7-8 (triage, interview, apply fixes) |
 | Update section-NN documentation | Step 9 (update section file with what was actually built) |
 | Commit section-NN | Step 10 (commit implementation + doc update together) |
@@ -260,14 +260,22 @@ git add {created_files...}
 git add -u
 ```
 
-### Step 6: Code Review (Subagent)
+### Step 6: Code Review (Subagent + optional Ollama reviewers)
 
 See [code-review-protocol.md](references/code-review-protocol.md)
 
 1. Create `{state_dir}/code_review/` directory if it doesn't exist
-2. Write staged diff to `{code_review_dir}/section-NN-diff.md`
-3. Launch `code-reviewer` subagent to analyze the diff
-4. Write subagent's review to `{code_review_dir}/section-NN-review.md`
+2. Write staged diff to `{code_review_dir}/section-NN-diff.md` (empty diff → skip review entirely, as before)
+3. Delete any old summary (`rm -f {code_review_dir}/section-NN-ollama-summary.json`), then start the Ollama reviewers with the Bash tool's `run_in_background: true` (always; it finishes at once when Ollama isn't configured):
+   ```bash
+   uv run --project {plugin_root} {plugin_root}/scripts/tools/ollama_code_review.py \
+     --section-plan {sections_dir}/section-NN-<name>.md --diff {code_review_dir}/section-NN-diff.md \
+     --output-dir {code_review_dir} --section-num NN
+   ```
+   `--project` is required — without it `openai` isn't installed.
+4. Launch `code-reviewer` subagent to analyze the diff
+5. Write subagent's review to `{code_review_dir}/section-NN-review.md`
+6. Wait for the background Ollama task to finish (end the turn if needed; its completion notification re-invokes you — don't poll), then read `section-NN-ollama-summary.json`
 
 ### Step 7: Code Review Triage and Interview
 
@@ -473,6 +481,8 @@ The setup script detects completed sections via `deep_implement_config.json` and
    - `state_dir=...` - extract value after `=`
 3. Find next pending, unblocked task
 4. Resume workflow from that task
+
+**Ollama reviews on resume:** if resuming at Step 6 or 7 and `{code_review_dir}/section-NN-ollama-summary.json` is missing (e.g. the background shell died with the session), re-run the Ollama script in the background (Step 6.3: delete + start) **once** before triage; if it's still missing, fall back as described in code-review-protocol.md step 7. Known risk: if the earlier run is somehow still alive, two runs share the GPU.
 
 ---
 
