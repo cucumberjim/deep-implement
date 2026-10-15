@@ -93,7 +93,11 @@ def _temperature_from_configs(configs: tuple[dict, ...]) -> float | None:
         block = (cfg or {}).get("ollama")
         if isinstance(block, dict) and block.get("temperature") is not None:
             t = block["temperature"]
-            if isinstance(t, bool) or not isinstance(t, (int, float)) or not math.isfinite(t):
+            try:
+                ok = not isinstance(t, bool) and isinstance(t, (int, float)) and math.isfinite(t)
+            except OverflowError:  # int too large for a float
+                ok = False
+            if not ok:
                 raise ValueError(f"invalid ollama.temperature: {t!r} (must be a finite number)")
             return float(t)
     return None

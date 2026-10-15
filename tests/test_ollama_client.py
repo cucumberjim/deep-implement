@@ -270,7 +270,7 @@ def test_temperature_first_non_null_wins_then_validated(monkeypatch):
         resolve_settings({"ollama": {"temperature": "bad"}}, {"ollama": {"temperature": 0.3}})
 
 
-@pytest.mark.parametrize("bad", [True, "0.2", math.nan, math.inf])
+@pytest.mark.parametrize("bad", [True, "0.2", math.nan, math.inf, 10**400])
 def test_temperature_invalid(monkeypatch, bad):
     monkeypatch.setenv("OLLAMA_HOST", "box")
     with pytest.raises(ValueError, match="ollama.temperature"):
@@ -290,7 +290,7 @@ def test_chat_sends_temperature():
 
 
 # byte-identical with deep-plan's scripts/llm_clients/ollama_client.py; change both together
-CLIENT_SHA256 = "91d81695f56ebc87cf0058ea1a4b0a6c685f6dd834f7b52a1f12bc4d254a258a"
+CLIENT_SHA256 = "a53a3c8f5666de04986bafc86c4ee574de791429ad00d0fcfdc969da1be6c4de"
 
 
 def test_client_sha256_pinned():
