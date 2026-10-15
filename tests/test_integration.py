@@ -545,3 +545,13 @@ class TestTaskGeneration:
         assert output["tasks_written"] == 0
         assert output["session_id"] is None
         assert output["session_id_source"] == "none"
+
+
+class TestPluginConfig:
+    """Plugin-root config.json."""
+
+    def test_config_json_ollama_block(self):
+        data = json.loads((Path(__file__).resolve().parents[1] / "config.json").read_text())
+        assert data["ollama"]["models"] == []
+        assert data["ollama"]["timeout_seconds"] == 1800
+        assert data["ollama"]["temperature"] is None

@@ -94,3 +94,10 @@ def sample_config():
         "sections_state": {},
         "created_at": "2025-01-14T10:30:00Z"
     }
+
+
+@pytest.fixture(autouse=True)
+def clear_ollama_env(monkeypatch):
+    """Keep a developer's exported OLLAMA_* vars out of every test (and its subprocesses)."""
+    for var in ("OLLAMA_HOST", "OLLAMA_MODELS", "OLLAMA_API_KEY"):
+        monkeypatch.delenv(var, raising=False)

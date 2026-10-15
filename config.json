@@ -1,0 +1,8 @@
+{
+  "ollama": {
+    "models": [],
+    "timeout_seconds": 1800,
+    "temperature": null,
+    "_comment": "Ollama code reviewers run only when OLLAMA_HOST is set and models is non-empty (e.g. [\"qwen3-coder-next:latest\"]); the OLLAMA_MODELS env var overrides models. The server needs OLLAMA_CONTEXT_LENGTH >= 65536, otherwise prompts are silently truncated and the review fails. temperature null leaves the server default (Ollama /v1 uses 1.0); set a number to override. Models run sequentially: worst-case wait per section is models x timeout_seconds. Plugin updates overwrite edits to this file, so OLLAMA_MODELS is the durable way to choose models."
+  }
+}
